@@ -1,0 +1,177 @@
+\documentclass[a4paper, 11pt, oneside]{article}
+\usepackage[a4paper,margin=1.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[fleqn]{amsmath}
+\usepackage{listings}
+\usepackage{color}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{fullpage}
+\usepackage{tikz}
+\usepackage{bm}
+
+\newcommand\bigforall{\mbox{\Large $\mathsurround0pt\forall$}}
+
+\title{Logic for Computer Science Project : Report}
+\author{Kuckart Marco}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Question 1}
+
+For this question let $p_{i,j}$ be the proposition ``the cell $i$ is reached with
+$j$ moves''.
+
+First, all cells must be visited: $\forall i \bigvee_j p_{i,j}$
+
+It is obvious that given the definition of $p_{i,j}$, we have the following
+constraint: A cell cannot be reached in two different numbers of moves.
+
+So we have
+$$\forall i \left(\forall j,k,j\neq k , \lnot(p_{i,j} \land p_{i,k}) \leftrightarrow (\lnot p_{i,j} \lor \lnot p_{i,k})\right)$$
+
+Another intuitive constraint is that two different cells cannot be reached in the
+same number of moves.
+
+So we also have
+$$\forall i \left(\forall j,k,j\neq k , \lnot(p_{j,i} \land p_{k,i}) \leftrightarrow (\lnot p_{j,i} \lor \lnot p_{k,i})\right)$$
+
+All possible numbers of moves have to be assigned, but this is a logical consequence
+of the previous statements.
+
+Let now $R_i$ denote the set of all cells reachable from the cell $i$ ($\# R_i \leq 8$).
+
+Given that they are the only possible moves, we have $\forall i, j$
+$$p_{i,j} \Rightarrow \bigvee_{r\in R_i} p_{r,j+1}
+\leftrightarrow
+\lnot p_{i,j} \bigvee \left(\bigvee_{r\in R_i} p_{r,j+1}\right)$$
+
+These clauses are sufficient to solve the problem.
+
+\section{Question 2}
+
+My first attempt to encode the problem in a more efficient way was the following:
+let $s_{i,j}$ be the proposition ``cell $i$ is followed by cell $j$ in the path''.
+This encoding has the advantage that the value of most variables can be set to false:
+for each cell $i$, there are only at most 8 cells that are valid for $s_{i,j}$, the
+others can be set to false.
+Then, the solver will have many clauses that are just literals and will therefore
+be able to perform a large number of propagations very quickly.
+
+However, I could not find a way to encode the fact that the knight must visit each cell.
+I therefore decided to use this new encoding together with the previous variables $p_{i,j}$,
+and to add clauses linking the two notions together.
+I also found that a few variables can have fixed values, and I removed
+all the redundant clauses: $(p \lor q) \land (q \lor p) \leftrightarrow (p \lor q)$.
+
+With all these improvements, the solver is able to solve the problem
+for an $8 \times 8$ chessboard about twelve times faster than before.
+
+
+\section{Question 3}
+
+To force the model to compute a new model, only one additional clause is needed: the
+disjunction of the negations of all the position variables that were true in the
+previous model.
+This constraint means that \textbf{at least one of the cell un the path must be in a
+different position than before} and that's it.
+
+\section{Question 4}
+
+Previously, to obtain a new model, the added clause was the disjunction of the
+negations of all the position variables $p_{i,j}$ (cf. Question 1) that were true
+in the previous model. The idea remains the same, but for each symmetry, we add
+the disjunction of the variables $p_{i', j}$ where $i'$ is the cell obtained by
+applying the symmetry to cell $i$.
+
+\section{Question 5}
+
+Since the solution is a path, one can visualize the multiple solutions for a path
+starting at $(i_0, j_0)$ as a rooted tree.
+
+\begin{figure}[h]
+    \centering
+    
+    \begin{tikzpicture}[scale=0.6]
+
+        \foreach \x in {0,...,11} {
+            \foreach \y in {0,...,11} {
+                \draw[fill=black, draw=black] (\x, -\y) circle (2pt);
+            }
+        }
+
+        \foreach \i in {0,...,11} {
+            \node at (\i, 0.5) {$\i$}; % x labels
+            \node at (-0.5, -\i) {$\i$}; % y labels
+        }
+
+        \node[font=\bfseries] at (5.5, 1.2) {
+            Cells
+        };
+
+        \node[font=\bfseries, rotate=90] at (-1.5, -5.5) {
+            Position
+        };
+
+        \draw[ultra thick, blue!70] (4, 0) -- (2, -1);
+        \draw[ultra thick, blue!70] (2, -1) -- (11, -2);
+        \draw[ultra thick, blue!70] (11, -2) -- (5, -3);
+        \draw[ultra thick, blue!70] (5, -3) -- (3, -4);
+        \draw[ultra thick, blue!70] (3, -4) -- (10, -5);
+        \draw[ultra thick, blue!70] (10, -5) -- (1, -6);
+        \draw[very thick, MidnightBlue!70] (1, -6) -- (8, -7);
+        \draw[very thick, MidnightBlue!70] (8, -7) -- (6, -8);
+        \draw[very thick, MidnightBlue!70] (6, -8) -- (0, -9);
+        \draw[very thick, MidnightBlue!70] (0, -9) -- (9, -10);
+        \draw[very thick, MidnightBlue!70] (9, -10) -- (7, -11);
+
+        \draw[ultra thick, red!70] (4, 0) -- (10, -1);
+        \draw[ultra thick, red!70] (10, -1) -- (3, -2);
+        \draw[ultra thick, red!70] (3, -2) -- (5, -3);
+        \draw[ultra thick, red!70] (5, -3) -- (11, -4);
+        \draw[ultra thick, red!70] (11, -4) -- (2, -5);
+        \draw[ultra thick, red!70] (2, -5) -- (9, -6);
+        \draw[very thick, magenta!70] (9, -6) -- (7, -7);
+        \draw[very thick, magenta!70] (7, -7) -- (1, -8);
+        \draw[very thick, magenta!70] (1, -8) -- (8, -9);
+        \draw[very thick, magenta!70] (8, -9) -- (6, -10);
+        \draw[very thick, magenta!70] (6, -10) -- (0, -11);
+
+        \draw[very thick, Turquoise!70] (1, -6) -- (7, -7);
+        \draw[very thick, Turquoise!70] (7, -7) -- (9, -8);
+        \draw[very thick, Turquoise!70] (9, -8) -- (0, -9);
+        \draw[very thick, Turquoise!70] (0, -9) -- (6, -10);
+        \draw[very thick, Turquoise!70] (6, -10) -- (8, -11);
+
+        \draw[very thick, orange!70] (9, -6) -- (0, -7);
+        \draw[very thick, orange!70] (0, -7) -- (6, -8);
+        \draw[very thick, orange!70] (6, -8) -- (8, -9);
+        \draw[very thick, orange!70] (8, -9) -- (1, -10);
+        \draw[very thick, orange!70] (1, -10) -- (7, -11);
+
+    \end{tikzpicture}
+
+
+    \caption{Decision tree representing all possible paths for a $3\times 4$ chessboard
+    with $i_0 = 1$ and $j_0 = 0$}\label{tree}
+\end{figure}
+
+Intuitively, to obtain a list of constraints that ensures a unique solution, my
+algorithm enumerates all valid paths using the SAT solver and compares them iteratively.
+When several paths differ at a given position, one possible cell is chosen arbitrarily,
+and a corresponding constraint is added to keep only the consistent solutions.
+This process is repeated until only one path remains.
+\\
+
+\noindent\textbf{Note:} One possible output of the algorithm (in the same situation
+as in Figure~\ref{tree}) is \texttt{[[1, 0, 1], [7, 1, 0]]} 
+As can be seen in Figure~\ref{tree}, this indeed corresponds to a constraint that
+ensures a unique solution.
+(The cell $(0,1)$ corresponds to column 1, and the cell $(1,0)$ corresponds to
+column 4 in the figure.)
+
+
+\end{document}
