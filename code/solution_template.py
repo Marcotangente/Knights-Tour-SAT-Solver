@@ -231,7 +231,7 @@ def question5(M, N,i0,j0):
 				if len(unique_cells_at_pos) > 1: # have to choose a constraint
 					chosen_cell = random.choice(unique_cells_at_pos)
 					y, x = cell_number_to_indices(N, chosen_cell)
-					constraint = [position, y, x]
+					constraint = (position, y, x)
 					constraints.append(constraint)
 					solutions = list(filter(
 						lambda solution: solution[constraint[1]][constraint[2]] == constraint[0], solutions
