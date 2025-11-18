@@ -162,7 +162,7 @@ def question1(M, N, i0, j0):
 
 
 	reset_variables_for_next_solve()
-	return solution, solver, [position_variables, successors_variables]
+	return solution, solver, (position_variables, successors_variables)
 
 def question3():
 	nb_sol = 0
@@ -175,7 +175,7 @@ def question3():
 			_, solver, vars = question1(M, N, x, y)
 			if solver.solve():
 				nb_sol += 1
-				while add_clauses_for_other_model(solver, vars, M, N, True):
+				while add_clauses_for_other_model(solver, vars, M, N):
 					if solver.solve():
 						nb_sol += 1
 
@@ -187,14 +187,23 @@ def question4():
 	# YOUR CODE HERE
 	M = 3
 	N = 4
+	antisymmetry_clauses = []
 	for x in range(M):
 		for y in range(N):
 			_, solver, vars = question1(M, N, x, y)
+			for clause in antisymmetry_clauses:
+				solver.add_clause(clause)
 			if solver.solve():
 				nb_sol += 1
-				while add_clauses_for_other_model(solver, vars, M, N, False):
+				for clause in get_antisymmetry_clauses(solver.get_model(), vars[0], M, N):
+					solver.add_clause(clause)
+					antisymmetry_clauses.append(clause)
+				while add_clauses_for_other_model(solver, vars, M, N):
 					if solver.solve():
 						nb_sol += 1
+						for clause in get_antisymmetry_clauses(solver.get_model(), vars[0], M, N):
+							solver.add_clause(clause)
+							antisymmetry_clauses.append(clause)
 
 	return nb_sol
 
@@ -207,7 +216,7 @@ def question5(M, N,i0,j0):
 	if solver.solve():
 		models = []
 		models.append(solver.get_model())
-		while add_clauses_for_other_model(solver, vars, M, N, True):
+		while add_clauses_for_other_model(solver, vars, M, N):
 			if solver.solve():
 				models.append(solver.get_model())
 
@@ -225,7 +234,7 @@ def question5(M, N,i0,j0):
 						for j in range(N):
 							if solution[i][j] == position:
 								cells_at_pos.append(indices_to_cell_number(N, i, j))
-								#should leave the two loops buut yeah...
+								#should exit (break) the two loops buut... idk how to do it
 
 				unique_cells_at_pos = list(set(cells_at_pos))
 				if len(unique_cells_at_pos) > 1: # have to choose a constraint
@@ -293,7 +302,7 @@ def transform_model_in_solution(model, solution, position_variables, M, N):
 				if model[ position_variables[i][j] - 1 ] > 0:
 					solution[k][l] = j
 
-def add_clauses_for_other_model(solver: Glucose3, variables, M, N, accept_symetry = True):
+def add_clauses_for_other_model(solver: Glucose3, variables, M, N):
 	if not solver.solve():
 		return False
 
@@ -311,28 +320,25 @@ def add_clauses_for_other_model(solver: Glucose3, variables, M, N, accept_symetr
 
 	solver.add_clause(new_clause)
 
-
-	if not accept_symetry:
-		solution = [[-1 for _ in range(N)] for _ in range(M)]
-		transform_model_in_solution(model, solution, position_variables, M, N)
-		vert_axial_sym_clause = []
-		horiz_axial_sym_clause = []
-		central_sym_clause = []
-		for i in range(M):
-			for j in range(N):
-				position = solution[i][j]
-				vert_axial_sym_clause.append(
-					-position_variables[indices_to_cell_number(N, i, N-j-1)][position]
-				)
-				horiz_axial_sym_clause.append(
-					-position_variables[indices_to_cell_number(N, M-i-1, j)][position]
-				)
-				central_sym_clause.append(
-					-position_variables[indices_to_cell_number(N, M-i-1, N-j-1)][position]
-				)
-
-		solver.add_clause(vert_axial_sym_clause)
-		solver.add_clause(horiz_axial_sym_clause)
-		solver.add_clause(central_sym_clause)
-
 	return True
+
+def get_antisymmetry_clauses(model, position_variables, M, N):
+	solution = [[-1 for _ in range(N)] for _ in range(M)]
+	transform_model_in_solution(model, solution, position_variables, M, N)
+	vert_axial_sym_clause = []
+	horiz_axial_sym_clause = []
+	central_sym_clause = []
+	for i in range(M):
+		for j in range(N):
+			position = solution[i][j]
+			vert_axial_sym_clause.append(
+				-position_variables[indices_to_cell_number(N, i, N-j-1)][position]
+			)
+			horiz_axial_sym_clause.append(
+				-position_variables[indices_to_cell_number(N, M-i-1, j)][position]
+			)
+			central_sym_clause.append(
+				-position_variables[indices_to_cell_number(N, M-i-1, N-j-1)][position]
+			)
+
+	return (vert_axial_sym_clause, horiz_axial_sym_clause, central_sym_clause)
